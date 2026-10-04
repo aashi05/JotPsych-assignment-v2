@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/start.js": { "maxDuration": 60 },
+    "api/status.js": { "maxDuration": 60 },
+    "api/stitch.js": {
+      "maxDuration": 60,
+      "includeFiles": "{node_modules/ffmpeg-static/**,assets/**}"
+    }
+  }
+}

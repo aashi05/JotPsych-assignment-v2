@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JotPsych Feature Shorts</title>
+<meta name="description" content="Describe a JotPsych feature and get a short, funny video starring a talking animal.">
+<style>
+  :root {
+    --midnight: #1C1E85;
+    --deep: #1E125E;
+    --warm: #FFF2F5;
+    --sunset: #FD96C9;
+    --afterglow: #813FE8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(1100px 700px at 50% -10%, var(--midnight), var(--deep) 70%);
+    color: var(--warm);
+    font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 48px;
+  }
+  h1 {
+    font-size: clamp(22px, 4vw, 32px);
+    margin: 0 0 16px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  h1 span { color: var(--sunset); }
+  form { display: flex; gap: 10px; width: min(600px, 100%); }
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 16px;
+    font-size: 16px;
+    color: var(--deep);
+    background: var(--warm);
+    border: 3px solid transparent;
+    border-radius: 14px;
+    outline: none;
+  }
+  input[type="text"]::placeholder { color: #6b5f8f; }
+  input[type="text"]:focus { border-color: var(--sunset); }
+  button { font-family: inherit; }
+  button#go {
+    padding: 14px 26px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--deep);
+    background: var(--sunset);
+    border: 0;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  button#go:hover:not(:disabled) { filter: brightness(1.06); }
+  button#go:disabled { opacity: 0.55; cursor: progress; }
+
+  /* Off-topic warning */
+  .confirm {
+    width: min(600px, 100%);
+    margin-top: 14px;
+    padding: 16px 18px;
+    border-radius: 16px;
+    background: var(--warm);
+    color: var(--deep);
+    border: 3px solid var(--sunset);
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .confirm p { margin: 0 0 12px; font-weight: 600; }
+  .confirm .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .confirm button {
+    padding: 10px 16px; font-size: 15px; font-weight: 800;
+    border-radius: 12px; cursor: pointer; border: 2px solid var(--deep);
+  }
+  .confirm .no { background: transparent; color: var(--deep); }
+  .confirm .yes { background: var(--deep); color: var(--warm); }
+
+  /* Progress bar */
+  .progress { width: min(600px, 100%); margin: 16px 0 4px; }
+  .bar {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(255, 242, 245, 0.18);
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--sunset), var(--afterglow));
+    transition: width 0.4s ease;
+  }
+  .progress .label { margin-top: 8px; font-size: 14px; text-align: center; opacity: 0.9; }
+
+  #status {
+    min-height: 22px;
+    margin: 10px 0 6px;
+    font-size: 15px;
+    text-align: center;
+    color: var(--warm);
+    opacity: 0.9;
+  }
+  #status.err { color: var(--sunset); opacity: 1; font-weight: 600; }
+
+  .frame {
+    width: min(340px, 100%);
+    padding: 6px;
+    border-radius: 30px;
+    background: linear-gradient(160deg, var(--sunset), var(--afterglow));
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  }
+  .screen {
+    position: relative;
+    aspect-ratio: 9 / 16;
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--deep);
+  }
+  video { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--deep); }
+  video::cue {
+    background: rgba(30, 18, 94, 0.88);
+    color: var(--warm);
+    font-family: ui-rounded, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .ph {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 24px; text-align: center;
+    color: var(--warm); opacity: 0.85; font-size: 15px;
+    pointer-events: none;
+  }
+  .ph .dot { width: 56px; height: 56px; border-radius: 50%; background: var(--afterglow); box-shadow: 0 0 0 10px rgba(129, 63, 232, 0.25); }
+  .ph.busy .dot { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.18); background: var(--sunset); } }
+  .hidden { display: none !important; }
+  #cta {
+    position: absolute; inset: 0; margin: auto;
+    width: 140px; height: 52px;
+    font-size: 16px; font-weight: 800;
+    color: var(--deep); background: var(--sunset);
+    border: 0; border-radius: 26px; cursor: pointer;
+  }
+
+  /* Download */
+  .dlwrap { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  button#dl {
+    padding: 12px 22px;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--deep);
+    background: var(--warm);
+    border: 3px solid var(--sunset);
+    border-radius: 14px;
+    cursor: pointer;
+  }
+  button#dl:disabled { opacity: 0.6; cursor: progress; }
+  #dlFallback { font-size: 14px; text-align: center; }
+  #dlFallback a { color: var(--sunset); margin: 0 6px; }
+</style>
+</head>
+<body>
+  <h1>Describe a <span>JotPsych</span> feature</h1>
+
+  <form id="form" autocomplete="off">
+    <input id="feature" type="text" maxlength="400" placeholder="e.g. Finishes your session note before you leave the room" aria-label="Describe a JotPsych feature">
+    <button id="go" type="submit">Go</button>
+  </form>
+
+  <div id="confirm" class="confirm hidden" role="alertdialog" aria-live="assertive">
+    <p>This website is for creating videos related to JotPsych features. Your prompt does not seem like a feature. Are you sure you want to proceed?</p>
+    <div class="row">
+      <button id="confirmNo" class="no" type="button">Edit my prompt</button>
+      <button id="confirmYes" class="yes" type="button">Yes, make it anyway</button>
+    </div>
+  </div>
+
+  <div id="progress" class="progress hidden">
+    <div class="bar" id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Video progress">
+      <div class="fill" id="fill"></div>
+    </div>
+    <div class="label" id="progLabel"></div>
+  </div>
+
+  <div id="status" role="status" aria-live="polite"></div>
+
+  <div class="frame">
+    <div class="screen">
+      <video id="player" playsinline preload="auto"></video>
+      <div id="ph" class="ph"><div class="dot"></div><div id="phText">Your video plays here</div></div>
+      <button id="cta" type="button" class="hidden">Play</button>
+    </div>
+  </div>
+
+  <div id="dlwrap" class="dlwrap hidden">
+    <button id="dl" type="button" disabled>Preparing download…</button>
+    <div id="dlFallback" class="hidden"></div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const form = $('form'), input = $('feature'), go = $('go'), statusEl = $('status');
+  const video = $('player'), ph = $('ph'), phText = $('phText'), cta = $('cta');
+  const confirmBox = $('confirm'), progress = $('progress'), fill = $('fill'), bar = $('bar'), progLabel = $('progLabel');
+  const dlwrap = $('dlwrap'), dl = $('dl'), dlFallback = $('dlFallback');
+
+  // One caption track, reused for every clip.
+  const track = video.addTextTrack('subtitles', 'English', 'en');
+  track.mode = 'showing';
+
+  let clips = [], idx = 0, running = false, finished = false, runToken = 0, dlUrl = null;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function setStatus(text, isErr) {
+    statusEl.textContent = text;
+    statusEl.className = isErr ? 'err' : '';
+  }
+
+  /* ---------- progress bar ---------- */
+  // Never goes backwards. Mixes real progress (finished scenes) with a time-based estimate,
+  // and holds at 92% until the video is actually ready.
+  let pct = 0, stage = 'script', genStart = 0, ready = 0, total = 3, progTimer = null;
+  function setBar(p) {
+    pct = Math.max(pct, Math.min(100, p));
+    fill.style.width = pct.toFixed(1) + '%';
+    bar.setAttribute('aria-valuenow', String(Math.round(pct)));
+  }
+  function progLabelFor() {
+    if (stage === 'script') return 'Writing the script…';
+    if (ready === 0) return 'Animating your scenes…';
+    return 'Adding the finishing touches…';
+  }
+  function tickProgress() {
+    let p;
+    if (stage === 'script') {
+      p = 2 + Math.min(8, (Date.now() - genStart) / 1000 * 1.5);
+    } else {
+      const el = (Date.now() - genStart) / 1000;
+      const est = 10 + 78 * (1 - Math.exp(-el / 32));
+      const real = 10 + 80 * (ready / total);
+      p = Math.min(92, Math.max(est, real));
+    }
+    setBar(p);
+    progLabel.textContent = progLabelFor();
+    phText.textContent = progLabelFor();
+  }
+  function startProgress() {
+    pct = 0; stage = 'script'; ready = 0; genStart = Date.now();
+    fill.style.transition = 'none'; setBar(0); void fill.offsetWidth; fill.style.transition = '';
+    progress.classList.remove('hidden');
+    clearInterval(progTimer);
+    tickProgress();
+    progTimer = setInterval(tickProgress, 250);
+  }
+  function stopProgress(success) {
+    clearInterval(progTimer);
+    if (success) {
+      setBar(100);
+      progLabel.textContent = 'Ready!';
+      setTimeout(() => { if (!running) progress.classList.add('hidden'); }, 1500);
+    } else {
+      progress.classList.add('hidden');
+    }
+  }
+
+  /* ---------- captions + playback ---------- */
+  function setCues(text, dur) {
+    while (track.cues && track.cues.length) track.removeCue(track.cues[0]);
+    const words = text.split(/\s+/).filter(Boolean);
+    const chunks = [];
+    for (let i = 0; i < words.length; i += 5) chunks.push(words.slice(i, i + 5).join(' '));
+    if (!chunks.length) return;
+    const t = Number.isFinite(dur) && dur > 1 ? dur : 6;
+    const start = 0.4, end = Math.max(start + 1, t - 0.4);
+    const step = (end - start) / chunks.length;
+    chunks.forEach((c, i) => {
+      const cue = new VTTCue(start + i * step, start + (i + 1) * step, c);
+      cue.snapToLines = false;
+      cue.line = 86;
+      cue.lineAlign = 'end';
+      cue.position = 50;
+      cue.size = 92;
+      cue.align = 'center';
+      track.addCue(cue);
+    });
+  }
+
+  function showCta(label) { cta.textContent = label; cta.classList.remove('hidden'); }
+  function hideCta() { cta.classList.add('hidden'); }
+
+  function playClip(i) {
+    idx = i;
+    finished = false;
+    video.src = clips[i].url;
+    video.load();
+    const p = video.play();
+    if (p && p.catch) p.catch(() => showCta('Tap to play'));
+  }
+
+  video.addEventListener('loadedmetadata', () => {
+    if (clips[idx]) setCues(clips[idx].line, video.duration);
+  });
+  video.addEventListener('playing', hideCta);
+  video.addEventListener('ended', () => {
+    if (idx < clips.length - 1) playClip(idx + 1);
+    else { finished = true; showCta('Replay'); }
+  });
+  video.addEventListener('click', () => {
+    if (!clips.length) return;
+    if (video.paused) video.play().catch(() => {}); else video.pause();
+  });
+  cta.addEventListener('click', () => {
+    hideCta();
+    if (finished) playClip(0);
+    else { const p = video.play(); if (p && p.catch) p.catch(() => showCta('Tap to play')); }
+  });
+
+  function resetPlayer() {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    while (track.cues && track.cues.length) track.removeCue(track.cues[0]);
+    clips = []; idx = 0; finished = false; dlUrl = null;
+    hideCta();
+    ph.classList.remove('hidden');
+    dlwrap.classList.add('hidden');
+    dlFallback.classList.add('hidden');
+    dlFallback.textContent = '';
+    setStatus('');
+  }
+
+  /* ---------- download ---------- */
+  function saveAs(url, name) {
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  dl.addEventListener('click', () => { if (dlUrl) saveAs(dlUrl, 'jotpsych-feature-video.mp4'); });
+
+  async function prepareDownload(token) {
+    dlwrap.classList.remove('hidden');
+    dl.disabled = true;
+    dl.textContent = 'Preparing download…';
+    try {
+      const r = await fetch('/api/stitch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clips: clips.map((c) => ({ url: c.url, line: c.line })) }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.downloadUrl) throw new Error(d.error || 'stitch failed');
+      if (token !== runToken) return;
+      dlUrl = d.downloadUrl;
+      dl.disabled = false;
+      dl.textContent = 'Download video (MP4)';
+    } catch (e) {
+      if (token !== runToken) return;
+      dl.textContent = 'Full download unavailable';
+      dlFallback.classList.remove('hidden');
+      dlFallback.textContent = 'Download the scenes instead: ';
+      clips.forEach((c, i) => {
+        const a = document.createElement('a');
+        a.href = c.downloadUrl || c.url;
+        a.download = `jotpsych-scene-${i + 1}.mp4`;
+        a.textContent = `Scene ${i + 1}`;
+        dlFallback.appendChild(a);
+      });
+    }
+  }
+
+  /* ---------- generate ---------- */
+  async function generate(feature, confirm, token) {
+    startProgress();
+    ph.classList.add('busy');
+
+    const r = await fetch('/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature, confirm: !!confirm }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || 'Could not start the video. Try again.');
+    if (data.needsConfirm) return { needsConfirm: true };
+
+    const scenes = data.scenes;
+    total = scenes.length;
+    ready = 0;
+    stage = 'gen';
+    genStart = Date.now();
+
+    const results = await Promise.all(scenes.map(async (s, k) => {
+      const deadline = Date.now() + 8 * 60 * 1000;
+      let fails = 0;
+      await sleep(8000 + k * 400);
+      while (Date.now() < deadline) {
+        try {
+          const sr = await fetch('/api/status?op=' + encodeURIComponent(s.op));
+          const sd = await sr.json();
+          if (!sr.ok) throw new Error(sd.error || 'status');
+          fails = 0;
+          if (sd.done) {
+            if (sd.url) { ready++; return { url: sd.url, downloadUrl: sd.downloadUrl, line: s.line }; }
+            return { error: sd.error || 'failed' };
+          }
+        } catch (e) {
+          if (++fails >= 4) return { error: 'network' };
+        }
+        await sleep(4000);
+      }
+      return { error: 'timeout' };
+    }));
+
+    clips = results.filter((x) => x.url);
+    if (!clips.length) {
+      const blocked = results.some((x) => x.error === 'blocked');
+      throw new Error(blocked
+        ? 'The video model passed on that one. Try wording the feature a little differently.'
+        : 'The video did not finish. Please try again.');
+    }
+    ph.classList.add('hidden');
+    ph.classList.remove('busy');
+    stopProgress(true);
+    setStatus(clips.length < total ? 'Here it is (one scene did not make it).' : '');
+    playClip(0);
+    prepareDownload(token);
+    return {};
+  }
+
+  async function run(feature, confirm) {
+    if (running) return;
+    running = true;
+    go.disabled = true;
+    confirmBox.classList.add('hidden');
+    resetPlayer();
+    const token = ++runToken;
+    try {
+      const out = await generate(feature, confirm, token);
+      if (out.needsConfirm) {
+        stopProgress(false);
+        ph.classList.remove('busy');
+        phText.textContent = 'Your video plays here';
+        confirmBox.classList.remove('hidden');
+      }
+    } catch (err) {
+      stopProgress(false);
+      setStatus(err.message || 'Something went wrong. Try again.', true);
+      phText.textContent = 'Your video plays here';
+      ph.classList.remove('busy');
+    } finally {
+      running = false;
+      go.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const feature = input.value.trim();
+    if (feature.length < 3) { setStatus('Describe a feature first.', true); return; }
+    run(feature, false);
+  });
+  $('confirmYes').addEventListener('click', () => {
+    const feature = input.value.trim();
+    if (feature.length >= 3) run(feature, true);
+  });
+  $('confirmNo').addEventListener('click', () => {
+    confirmBox.classList.add('hidden');
+    input.focus();
+    input.select();
+  });
+  // editing the prompt dismisses a pending warning
+  input.addEventListener('input', () => confirmBox.classList.add('hidden'));
+})();
+</script>
+</body>
+</html>
