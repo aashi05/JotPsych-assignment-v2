@@ -9,11 +9,16 @@ One text box, one Go button, one vertical video. Type a JotPsych feature and get
 - **Off-topic warning:** if the prompt does not look like a JotPsych feature (e.g. "a girl walking on a beach"), the page asks "Are you sure you want to proceed?" before any video money is spent.
 
 ## How it works
-1. `POST /api/start` asks a Gemini text model for a 3-scene script AND whether the prompt is a feature. If not, it returns `needsConfirm` and starts nothing. Otherwise it starts 3 Veo 3.1 Lite jobs (9:16, 6s, 720p) and returns right away.
+1. `POST /api/start` asks a Gemini text model for a 2-scene script AND whether the prompt is a feature. If not, it returns `needsConfirm` and starts nothing. Otherwise it starts 2 Veo 3.1 jobs (9:16, 8s, 720p) and returns right away.
 2. The page polls `GET /api/status` per scene. Finished clips are saved to Vercel Blob. The page plays them back to back with a caption track.
 3. When all scenes are ready, the page calls `POST /api/stitch`, which downloads the clips, joins them with ffmpeg (bundled via `ffmpeg-static`), burns captions and the frame in, saves the MP4 to Blob, and returns a download link.
 
-Cost per video: 3 x 6s x ~$0.05/s on Lite = about $0.90. The off-topic check and script cost fractions of a cent.
+## Quota design (important)
+Gemini API Tier 1 allows only **2 Veo requests per minute and 10 per day, per model**. So a video uses just 2 requests (2 scenes x 8s), and each scene tries `veo-3.1-lite-generate-preview` first and falls back to `veo-3.1-fast-generate-preview` when Lite's quota is used up. That gives roughly 5 videos/day on Lite plus 5 on Fast. Quotas reset at midnight Pacific (3 AM Eastern). When both are exhausted the page says so plainly.
+
+Cost per video: 2 x 8s x $0.05/s = about $0.80 on Lite, about $1.60 if it falls back to Fast.
+
+Tunable via env vars: `SCENES` (1-3), `CLIP_SECONDS` (4/6/8), `VEO_MODELS`.
 
 ## Deploy (Vercel)
 1. Push to GitHub, import in Vercel (Application Preset: Other, no build command).

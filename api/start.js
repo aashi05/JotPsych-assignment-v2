@@ -2,7 +2,8 @@
 //   -> { scenes: [{ op, line }] }                     videos started
 //   -> { needsConfirm: true, message }                prompt does not look like a feature
 // Writes the script, then starts one Veo job per scene and returns immediately.
-import { gfetch, VEO_MODEL, CLIP_SECONDS } from "../lib/gemini.js";
+// If a model's quota is used up, that scene falls back to the next model in VEO_MODELS.
+import { gfetch, VEO_MODELS, CLIP_SECONDS } from "../lib/gemini.js";
 import { writeScript, buildVeoPrompt, NOT_A_FEATURE_MESSAGE } from "../lib/script.js";
 
 // Light per-IP throttle (in-memory, best effort). The prepaid balance is the real cap.
@@ -21,8 +22,8 @@ function limited(ip) {
   return false;
 }
 
-async function startScene(prompt) {
-  const r = await gfetch(`models/${VEO_MODEL}:predictLongRunning`, {
+async function startScene(model, prompt) {
+  const r = await gfetch(`models/${model}:predictLongRunning`, {
     method: "POST",
     body: JSON.stringify({
       instances: [{ prompt }],
@@ -35,9 +36,42 @@ async function startScene(prompt) {
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.name) {
-    throw new Error(j?.error?.message || `Veo start failed (${r.status})`);
+    const e = new Error(j?.error?.message || `Veo start failed (${r.status})`);
+    e.status = r.status;
+    e.raw = JSON.stringify(j?.error || {}).slice(0, 2000);
+    throw e;
   }
   return j.name;
+}
+
+const isQuota = (e) =>
+  e.status === 429 ||
+  /quota|exhaust|rate limit|resource_exhausted/i.test(`${e.message} ${e.raw || ""}`);
+
+// Try each model in order; only move on when the failure is a quota/rate-limit one.
+async function startWithFallback(prompt) {
+  let lastErr;
+  for (const model of VEO_MODELS) {
+    try {
+      return await startScene(model, prompt);
+    } catch (e) {
+      lastErr = e;
+      console.error(`scene start failed on ${model}:`, e.message);
+      if (!isQuota(e)) throw e;
+    }
+  }
+  throw lastErr;
+}
+
+function quotaMessage(errors) {
+  const t = errors.map((e) => `${e?.raw || ""} ${e?.message || ""}`).join(" ");
+  if (/PerDay|per_day|per day/i.test(t)) {
+    return "Today's video limit has been reached. It resets at midnight Pacific time (3 AM Eastern). Please try again then.";
+  }
+  if (/PerMinute|per_minute|per minute/i.test(t)) {
+    return "The video service is busy right now. Please try again in a minute.";
+  }
+  return "The video service is at its limit right now. Please try again in a minute. If it keeps happening, the daily limit may be used up (it resets at midnight Pacific time, 3 AM Eastern).";
 }
 
 export default async function handler(req, res) {
@@ -82,24 +116,24 @@ export default async function handler(req, res) {
     }
 
     const settled = await Promise.allSettled(
-      script.scenes.map((sc, i) => startScene(buildVeoPrompt(script, sc, i)))
+      script.scenes.map((sc, i) => startWithFallback(buildVeoPrompt(script, sc, i)))
     );
     const scenes = [];
+    const errors = [];
     settled.forEach((s, i) => {
       if (s.status === "fulfilled") {
         scenes.push({ op: s.value, line: script.scenes[i].line });
       } else {
-        console.error("scene start failed:", s.reason?.message);
+        errors.push(s.reason);
       }
     });
     if (!scenes.length) {
-      const why = settled[0]?.reason?.message || "";
-      const busy = /quota|rate|429|exhaust|credit|billing/i.test(why);
-      return res.status(busy ? 503 : 502).json({
-        error: busy
-          ? "The video service is busy right now. Please try again in a minute."
-          : "Could not start the video. Please try again.",
-      });
+      if (errors.length && errors.every(isQuota)) {
+        return res.status(503).json({ error: quotaMessage(errors) });
+      }
+      return res
+        .status(502)
+        .json({ error: "Could not start the video. Please try again." });
     }
     return res.status(200).json({ scenes });
   } catch (err) {

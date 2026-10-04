@@ -1,11 +1,12 @@
 // GET /api/status?op=models/.../operations/...
 // Checks one Veo job once. When done, downloads the clip and returns a playable URL.
-import { BASE, VEO_MODEL, apiKey, gfetch } from "../lib/gemini.js";
+import { BASE, VEO_MODELS, apiKey, gfetch } from "../lib/gemini.js";
 import { saveVideo } from "../lib/storage.js";
 
-// Only ever poll Veo operations of our own model, so the key can't be pointed elsewhere.
+// Only ever poll Veo operations of our own models, so the key can't be pointed elsewhere.
+const esc = (s) => s.replace(/[.\-]/g, "\\$&");
 const OP_RE = new RegExp(
-  `^models/${VEO_MODEL.replace(/[.\-]/g, "\\$&")}/operations/[A-Za-z0-9_-]+$`
+  `^models/(?:${VEO_MODELS.map(esc).join("|")})/operations/[A-Za-z0-9_-]+$`
 );
 
 export default async function handler(req, res) {
